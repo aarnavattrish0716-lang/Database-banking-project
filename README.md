@@ -57,3 +57,9 @@ st.dataframe(df)
 - SQL queries can be executed directly using methods such as query().
 - Connection management is handled automatically by Streamlit.
 - write operations are less straight forward in this.
+
+
+## Not using pages/ instead using navigation() function
+
+Because we want to do role-based navigation, pages in sidebar will be available depending on what is role of user
+
