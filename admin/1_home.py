@@ -1,8 +1,44 @@
 import streamlit as st
+from modules.admin_fun import get_dashboard_counts
+from datetime import datetime 
+now = datetime.now()
+## here markdown see a string and it sends it to browser,browser receives HTML and CSS which it parse and draws the layout
+st.markdown(f"""
+<div style="
+padding:20px;
+border-radius:15px;
+background:rgba(255,255,255,0.05);
+border:1px solid #444;
+">
+<h2>👋 Welcome back , {st.session_state.username}</h2>
+<p style="font-size:18px;">📅 {now.strftime('%A, %d %B %Y')}</p>
+<p style="font-size:18px;">🕒 {now.strftime('%I:%M %p')}</p>
+</div>
+""", unsafe_allow_html=True)
 
-st.title("🏦 Admin Dashboard")
+counts=get_dashboard_counts()
+with st.container(border=True,height="content",horizontal=True):
+    col1, col2, col3, col4, col5= st.columns(5)
 
-st.write(f"Welcome {st.session_state.username}")
+    with col1:
+         with st.container(border=True):
+            st.metric(label="👥 Users",value=counts["users"])
+
+    with col2:
+        with st.container(border=True): 
+            st.metric(label="💳 Accounts",value=counts["accounts"])
+
+    with col3:
+        with st.container(border=True): 
+            st.metric(label="🏢 Branches",value=counts["branches"])
+
+    with col4:
+        with st.container(border=True): 
+            st.metric(label="💰 Loans",value=counts["loans"])
+
+    with col5:
+        with st.container(border=True):  
+            st.metric(label="🔄 Transactions",value=counts["transactions"])
 
 if st.button("Logout"):
     st.session_state.logged_in=False
