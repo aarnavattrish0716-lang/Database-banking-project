@@ -7,9 +7,9 @@ def login(username,password):
     SELECT user_id, user_name, role
     FROM users
     WHERE user_name=%s
-    AND password=%s
+    AND password=%s AND user_status=%s
     """
-    cursor.execute(query,(username,password))
+    cursor.execute(query,(username,password,"Active"))
     user=cursor.fetchone() ## fetched one row
     cursor.close()
     conn.close()
