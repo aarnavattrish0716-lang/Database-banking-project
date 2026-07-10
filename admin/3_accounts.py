@@ -9,10 +9,6 @@ if st.session_state.role == "SUPER_ADMIN":
 else:
     st.info("Branch Head Mode")
 
-# =====================================================
-# Open New Account
-# =====================================================
-
 st.subheader("➕ Open New Account")
 
 customers = md.get_customers()
@@ -95,9 +91,7 @@ with st.form("account_form", clear_on_submit=True):
             time.sleep(2)
             st.rerun()
 
-# =====================================================
-# Existing Accounts
-# =====================================================
+
 
 st.divider()
 
@@ -125,9 +119,6 @@ else:
 
     st.info("No accounts found.")
 
-# =====================================================
-# Freeze / Unfreeze Account
-# =====================================================
 
 st.divider()
 
@@ -182,10 +173,6 @@ if accounts:
 else:
 
     st.info("No accounts available.")
-
-# =====================================================
-# Notes
-# =====================================================
 
 st.divider()
 

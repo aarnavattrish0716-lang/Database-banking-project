@@ -348,9 +348,6 @@ def create_account(user_id, branch_id, account_type, initial_balance):
 
     try:
 
-        # -----------------------------------------
-        # Customer must be ACTIVE
-        # -----------------------------------------
 
         cursor.execute(
             """
@@ -371,10 +368,6 @@ def create_account(user_id, branch_id, account_type, initial_balance):
             st.error("Customer login is inactive.")
             return
 
-        # -----------------------------------------
-        # Branch must be ACTIVE
-        # -----------------------------------------
-
         cursor.execute(
             """
             SELECT branch_status
@@ -390,9 +383,6 @@ def create_account(user_id, branch_id, account_type, initial_balance):
             st.error("Branch is inactive.")
             return
 
-        # -----------------------------------------
-        # Duplicate account check
-        # -----------------------------------------
 
         cursor.execute(
             """
@@ -417,10 +407,6 @@ def create_account(user_id, branch_id, account_type, initial_balance):
             )
 
             return
-
-        # -----------------------------------------
-        # Create Account
-        # -----------------------------------------
 
         cursor.execute(
             """
@@ -448,10 +434,6 @@ def create_account(user_id, branch_id, account_type, initial_balance):
         )
 
         account_id = cursor.lastrowid
-
-        # -----------------------------------------
-        # Initial Deposit Transaction
-        # -----------------------------------------
 
         if initial_balance > 0:
 
