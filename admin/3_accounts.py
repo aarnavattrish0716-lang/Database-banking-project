@@ -36,7 +36,7 @@ with st.form("account_form", clear_on_submit=True):
         min_value=0.0,
         value=0.0,
         step=100.0
-    )#Using this as streamlit automaticaaly validates it that it is >0.0 and user can type in this also
+    )#Using this as streamlit automatically validates it that it is >0.0 and user can type in this also
 
     branch_id = None
 
@@ -123,14 +123,26 @@ else:
 st.divider()
 
 st.subheader("🔄 Update Account Status")
+if st.session_state.role == "SUPER_ADMIN":
 
-if accounts:
+    manageable_accounts = md.get_manageable_accounts(
+        "SUPER_ADMIN",
+        None
+    )
+
+else:
+
+    manageable_accounts = md.get_manageable_accounts(
+        "BRANCH_HEAD",
+        st.session_state.branch_id
+    )
+if  manageable_accounts:
 
     with st.form("account_status_form", clear_on_submit=True):
 
         selected_account = st.selectbox(
             "Account",
-            options=accounts,
+            options= manageable_accounts,
             index=None,
             placeholder="Select Account",
             format_func=lambda x:

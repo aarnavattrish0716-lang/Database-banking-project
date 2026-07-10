@@ -97,12 +97,14 @@ with st.form("user_status_form",clear_on_submit=True):
     if submit_update:
         if selected_user is None or status is None:
             st.warning("Please select the fields.")
-        elif selected_user["role"] == "SUPER_ADMIN":
-            st.error("Super Admin account cannot be deactivated.")
+        elif selected_user["user_status"] == status:
+            st.info("User already has this status.")
         else:
             md.update_user_status(
-                selected_user["user_id"],
-                status
+             selected_user["user_id"],
+             selected_user["role"],
+             selected_user["branch_id"],
+             status
             )
             time.sleep(2)
             st.rerun()
