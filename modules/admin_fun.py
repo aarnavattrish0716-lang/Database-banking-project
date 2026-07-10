@@ -690,12 +690,58 @@ def update_account_status(account_id, status):
 
     except mysql.connector.Error as e:
 
-        conn.rollback()
-
         st.error(
             f"Database Error : {e}"
         )
 
     cursor.close()
 
+    conn.close()
+def get_all_loans():
+    conn=get_connection()
+    cursor=conn.cursor(dictionary=True)
+    query="""
+    SELECT l.loan_id,u.user_name,u.user_status,
+    l.loan_type,l.amount,l.loan_status
+    FROM loans as l JOIN
+    users as u on
+    u.user_id=l.user_id
+    """ 
+    cursor.execute(query)
+    data=cursor.fetchall()    
+    cursor.close()
+    conn.close()
+    return data
+def get_pending_loans():
+    conn=get_connection()
+    cursor=conn.cursor(dictionary=True)
+    query="""
+    SELECT l.loan_id,u.user_name,
+    l.loan_type,l.amount,l.loan_status
+    FROM loans l JOIN
+    users u ON
+    l.user_id=u.user_id
+    WHERE u.user_status=%s
+    AND l.loan_status=%s
+    """
+    cursor.execute(query,("ACTIVE","PENDING"))
+    data=cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return data
+def update_loan_status(loan_id,loan_status):
+    conn=get_connection()
+    cursor=conn.cursor()
+    try:
+        query="""
+        UPDATE loans
+        SET loan_status=%s
+        WHERE loan_id=%s
+        """
+        cursor.execute(query,(loan_status,loan_id))
+        conn.commit()
+        st.success("Loan Status Updated")
+    except mysql.connector.Error as e:
+        st.error(f"Database Error:{e}")
+    cursor.close()
     conn.close()
