@@ -1,6 +1,9 @@
 import streamlit as st
 import time
 import modules.admin_fun as md
+if st.session_state.role!="SUPER_ADMIN":
+    st.error("Access Denied")
+    st.stop()
 st.title("🏦 Branch Management")
 st.subheader("➕ Add Branch")
 with st.form("branch_form",clear_on_submit=True):
@@ -18,7 +21,7 @@ st.divider()
 st.subheader("🏦 Existing Branches")
 branches=md.get_all_branch()
 if branches:
-    st.dataframe( branches,use_container_width=True,hide_index=True)
+    st.dataframe( branches,width='stretch',hide_index=True)
 else:
     st.info("🏦 No branches found. Add your first branch to get started.")
 st.subheader("🔄Update Branch Status")

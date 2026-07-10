@@ -17,7 +17,6 @@ if not st.session_state.logged_in:
 
     username = st.text_input("Username")
     password = st.text_input("Password", type="password")
-
     if st.button("Login"):
 
         user = login(username, password)
@@ -28,7 +27,8 @@ if not st.session_state.logged_in:
             st.session_state.user_id = user["user_id"]
             st.session_state.username = user["user_name"]
             st.session_state.role = user["role"]
-
+            st.session_state.branch_id = user["branch_id"]
+            st.session_state.branch_name = user["branch_name"]
             st.rerun() # So that when user successful logged in we will rerun the script and now will enter else (2) if we don't use rerun and remove else (2) then even when else(1) runs it will open navigation   
 
         else: #1
@@ -37,7 +37,7 @@ if not st.session_state.logged_in:
 
 else: #2
 
-    if st.session_state.role == "ADMIN":
+    if st.session_state.role in ["SUPER_ADMIN","BRANCH_HEAD"]:
         ## If user is admin then only these pages will be in sidebar navigation and default screen is the first screen in the 
         pages = [
             st.Page("admin/1_home.py", title="Dashboard", icon="🏠"),

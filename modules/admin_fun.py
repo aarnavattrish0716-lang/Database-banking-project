@@ -72,58 +72,546 @@ def get_all_branch():
     conn.close()
     return data #returns a list of dict
 def update_branch_status(branch_id, status):
+
     conn = get_connection()
     cursor = conn.cursor()
-    query="""
+
+    try:
+
+        cursor.execute(
+            """
             UPDATE branches
             SET branch_status = %s
             WHERE branch_id = %s
-        """
-    try:
+            """,
+            (status, branch_id)
+        )
+        if status == "INACTIVE":
 
-        cursor.execute(query,(status, branch_id))
+            cursor.execute(
+                """
+                UPDATE users
+                SET user_status = 'INACTIVE'
+                WHERE branch_id = %s
+                """,
+                (branch_id,)
+            )
+
+            cursor.execute(
+                """
+                UPDATE accounts
+                SET acc_status = 'FROZEN'
+                WHERE branch_id = %s
+                """,
+                (branch_id,)
+            )
+
         conn.commit()
-        st.success("Branch Status updated successfully!")
+
+        st.success("Branch status updated successfully!")
+
     except mysql.connector.Error as e:
-        st.error(f"Database Error:{e}")
+        conn.rollback()
+        st.error(f"Database Error: {e}")
+
     cursor.close()
     conn.close()
 
 ## Functions of users
-def add_user(username,password,role):
-    conn=get_connection()
-    cursor=conn.cursor()
-    query="INSERT INTO USERS (user_name,password,role) VALUES(%s,%s,%s)"
+def add_user(username, password, role, branch_id):
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
     try:
-        cursor.execute(query,(username,password,role))
+
+        if role == "BRANCH_HEAD":
+
+            cursor.execute(
+                """
+                SELECT user_id
+                FROM users
+                WHERE role = 'BRANCH_HEAD'
+                  AND branch_id = %s
+                """,
+                (branch_id,)
+            )
+
+            if cursor.fetchone():
+                st.error("This branch already has a Branch Head.")
+                return
+
+        query = """
+        INSERT INTO users
+        (user_name, password, role, branch_id)
+        VALUES (%s, %s, %s, %s)
+        """
+
+        cursor.execute(
+            query,
+            (username, password, role, branch_id)
+        )
+
         conn.commit()
+
         st.success("User added successfully!")
+
     except mysql.connector.Error as e:
-        st.error(f"Database Error:{e}")
+        st.error(f"Database Error: {e}")
+
+    finally:
+        cursor.close()
+        conn.close()
+    
 def get_all_users():
-    conn=get_connection()
-    cursor=conn.cursor(dictionary=True)
-    query="SELECT * FROM USERS ORDER BY user_id"
+
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    query = """
+    SELECT
+        u.user_id,
+        u.user_name,
+        u.role,
+        b.branch_name,
+        u.user_status
+    FROM users u
+    LEFT JOIN branches b
+        ON u.branch_id = b.branch_id
+    ORDER BY
+        u.role,
+        u.user_id
+    """
     cursor.execute(query)
-    data=cursor.fetchall()
+    data = cursor.fetchall()
     cursor.close()
     conn.close()
     return data
-def update_user_status(user_id,status):
+def get_branch_staff(branch_id):
     conn = get_connection()
-    cursor = conn.cursor()
-    query="""
-            UPDATE users
-            SET user_status = %s
-            WHERE user_id = %s
-        """
-    try:
+    cursor = conn.cursor(dictionary=True)
+    query = """
+    SELECT
+        u.user_id,
+        u.user_name,
+        u.role,
+        b.branch_name,
+        u.user_status
+    FROM users u
+    JOIN branches b
+        ON u.branch_id = b.branch_id
+    WHERE
+        u.role='STAFF'
+        AND u.branch_id=%s
+    ORDER BY
+        u.user_id
+    """
+    cursor.execute(query, (branch_id,))
+    data = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return data
+def get_manageable_users(role, branch_id):
 
-        cursor.execute(query,(status, user_id))
-        conn.commit()
-        st.success("User Status updated successfully!")
-    except mysql.connector.Error as e:
-        st.error(f"Database Error:{e}")
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    if role == "SUPER_ADMIN":
+
+        query = """
+        SELECT
+            user_id,
+            user_name,
+            role,
+            user_status
+        FROM users
+        WHERE role IN
+        (
+            'BRANCH_HEAD',
+            'STAFF',
+            'CUSTOMER'
+        )
+        ORDER BY
+            role,
+            user_id
+        """
+
+        cursor.execute(query)
+
+    else:
+
+        query = """
+        SELECT
+            user_id,
+            user_name,
+            role,
+            user_status
+        FROM users
+        WHERE
+            role='STAFF'
+            AND branch_id=%s
+        ORDER BY
+            user_id
+        """
+
+        cursor.execute(query, (branch_id,))
+
+    users = cursor.fetchall()
+
     cursor.close()
     conn.close()
 
+    return users
+
+def update_user_status(user_id, status):
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            """
+            UPDATE users
+            SET user_status=%s
+            WHERE user_id=%s
+            """,
+            (status, user_id)
+        )
+
+        # Freeze all accounts when customer is deactivated
+        if status == "INACTIVE":
+
+            cursor.execute(
+                """
+                UPDATE accounts
+                SET acc_status='FROZEN'
+                WHERE user_id=%s
+                """,
+                (user_id,)
+            )
+
+        conn.commit()
+
+        st.success("User status updated successfully!")
+
+    except mysql.connector.Error as e:
+        st.error(f"Database Error: {e}")
+
+    cursor.close()
+    conn.close()
+def get_active_branches():
+
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    query = """
+    SELECT *
+    FROM branches
+    WHERE branch_status='ACTIVE'
+    ORDER BY branch_name
+    """
+
+    cursor.execute(query)
+
+    branches = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+
+    return branches
+
+def get_customers():
+
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    query = """
+    SELECT
+        user_id,
+        user_name
+    FROM users
+    WHERE
+        role='CUSTOMER'
+    ORDER BY user_name
+    """
+
+    cursor.execute(query)
+
+    customers = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+
+    return customers
+def create_account(user_id, branch_id, account_type, initial_balance):
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    try:
+
+        # -----------------------------------------
+        # Customer must be ACTIVE
+        # -----------------------------------------
+
+        cursor.execute(
+            """
+            SELECT user_status
+            FROM users
+            WHERE user_id=%s
+            """,
+            (user_id,)
+        )
+
+        row = cursor.fetchone()
+
+        if row is None:
+            st.error("Customer not found.")
+            return
+
+        if row[0] != "ACTIVE":
+            st.error("Customer login is inactive.")
+            return
+
+        # -----------------------------------------
+        # Branch must be ACTIVE
+        # -----------------------------------------
+
+        cursor.execute(
+            """
+            SELECT branch_status
+            FROM branches
+            WHERE branch_id=%s
+            """,
+            (branch_id,)
+        )
+
+        row = cursor.fetchone()
+
+        if row[0] != "ACTIVE":
+            st.error("Branch is inactive.")
+            return
+
+        # -----------------------------------------
+        # Duplicate account check
+        # -----------------------------------------
+
+        cursor.execute(
+            """
+            SELECT account_id
+            FROM accounts
+            WHERE
+                user_id=%s
+                AND branch_id=%s
+                AND account_type=%s
+            """,
+            (
+                user_id,
+                branch_id,
+                account_type
+            )
+        )
+
+        if cursor.fetchone():
+
+            st.error(
+                "Customer already has this account type in this branch."
+            )
+
+            return
+
+        # -----------------------------------------
+        # Create Account
+        # -----------------------------------------
+
+        cursor.execute(
+            """
+            INSERT INTO accounts
+            (
+                user_id,
+                branch_id,
+                account_type,
+                balance
+            )
+            VALUES
+            (
+                %s,
+                %s,
+                %s,
+                %s
+            )
+            """,
+            (
+                user_id,
+                branch_id,
+                account_type,
+                initial_balance
+            )
+        )
+
+        account_id = cursor.lastrowid
+
+        # -----------------------------------------
+        # Initial Deposit Transaction
+        # -----------------------------------------
+
+        if initial_balance > 0:
+
+            cursor.execute(
+                """
+                INSERT INTO transactions
+                (
+                    account_id,
+                    transaction_type,
+                    amount
+                )
+                VALUES
+                (
+                    %s,
+                    'DEPOSIT',
+                    %s
+                )
+                """,
+                (
+                    account_id,
+                    initial_balance
+                )
+            )
+
+        conn.commit()
+
+        st.success("Account created successfully.")
+
+    except mysql.connector.Error as e:
+
+        conn.rollback()
+
+        st.error(f"Database Error : {e}")
+
+    cursor.close()
+    conn.close()
+def get_all_accounts():
+
+    conn = get_connection()
+
+    cursor = conn.cursor(dictionary=True)
+
+    query = """
+    SELECT
+
+        a.account_id,
+
+        u.user_name,
+
+        b.branch_name,
+
+        a.account_type,
+
+        a.balance,
+
+        a.acc_status
+
+    FROM accounts a
+
+    JOIN users u
+        ON a.user_id=u.user_id
+
+    JOIN branches b
+        ON a.branch_id=b.branch_id
+
+    ORDER BY
+        a.account_id
+    """
+
+    cursor.execute(query)
+
+    data = cursor.fetchall()
+
+    cursor.close()
+
+    conn.close()
+
+    return data
+def get_branch_accounts(branch_id):
+
+    conn = get_connection()
+
+    cursor = conn.cursor(dictionary=True)
+
+    query = """
+    SELECT
+
+        a.account_id,
+
+        u.user_name,
+
+        b.branch_name,
+
+        a.account_type,
+
+        a.balance,
+
+        a.acc_status
+
+    FROM accounts a
+
+    JOIN users u
+        ON a.user_id=u.user_id
+
+    JOIN branches b
+        ON a.branch_id=b.branch_id
+
+    WHERE
+        a.branch_id=%s
+
+    ORDER BY
+        a.account_id
+    """
+
+    cursor.execute(
+        query,
+        (branch_id,)
+    )
+
+    data = cursor.fetchall()
+
+    cursor.close()
+
+    conn.close()
+
+    return data
+def update_account_status(account_id, status):
+
+    conn = get_connection()
+
+    cursor = conn.cursor()
+
+    try:
+
+        cursor.execute(
+            """
+            UPDATE accounts
+            SET acc_status=%s
+            WHERE account_id=%s
+            """,
+            (
+                status,
+                account_id
+            )
+        )
+
+        conn.commit()
+
+        st.success(
+            "Account status updated successfully."
+        )
+
+    except mysql.connector.Error as e:
+
+        conn.rollback()
+
+        st.error(
+            f"Database Error : {e}"
+        )
+
+    cursor.close()
+
+    conn.close()
