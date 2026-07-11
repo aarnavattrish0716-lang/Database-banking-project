@@ -21,7 +21,7 @@ st.divider()
 st.subheader("🏦 Existing Branches")
 branches=md.get_all_branch()
 if branches:
-    st.dataframe( branches,width='stretch',hide_index=True)
+    st.dataframe(branches,width='stretch',hide_index=True)
 else:
     st.info("🏦 No branches found. Add your first branch to get started.")
 st.subheader("🔄Update Branch Status")

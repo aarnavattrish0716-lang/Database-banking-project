@@ -745,3 +745,58 @@ def update_loan_status(loan_id,loan_status):
         st.error(f"Database Error:{e}")
     cursor.close()
     conn.close()
+def get_all_transactions():
+    conn=get_connection()
+    cursor=conn.cursor(dictionary=True)
+    if st.session_state.role=="SUPER_ADMIN":
+        query="""
+        SELECT
+        t.transaction_id,
+        u.user_name,
+        a.account_id,
+        b.branch_name,
+        t.transaction_type,
+        t.amount,
+        t.transaction_date_time
+        FROM transactions t
+
+        JOIN accounts a
+        ON t.account_id = a.account_id
+
+        JOIN users u
+        ON a.user_id = u.user_id
+
+        JOIN branches b
+        ON a.branch_id = b.branch_id
+
+        ORDER BY
+        t.transaction_date_time DESC;
+        """
+        cursor.execute(query)
+    else:
+        query="""
+             SELECT
+            t.transaction_id,
+            u.user_name,
+            a.account_id,
+            b.branch_name,
+            t.transaction_type,
+            t.amount,
+            t.transaction_date_time
+        FROM transactions t
+        JOIN accounts a
+        ON t.account_id = a.account_id
+        JOIN users u
+        ON a.user_id = u.user_id
+        JOIN branches b
+        ON a.branch_id = b.branch_id
+        WHERE
+        a.branch_id=%s
+        ORDER BY
+        t.transaction_date_time DESC;
+    """
+        cursor.execute(query,(st.session_state.branch_id,))
+    data=cursor.fetchall() 
+    cursor.close()
+    conn.close()
+    return data
