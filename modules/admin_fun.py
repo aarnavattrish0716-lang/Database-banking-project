@@ -1,4 +1,3 @@
-import mysql.connector
 import streamlit as st
 from db import get_connection
 ## Function of home
