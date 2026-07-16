@@ -1,3 +1,4 @@
+import mysql.connector
 import streamlit as st
 from db import get_connection
 ## Function of home
@@ -20,6 +21,50 @@ def get_dashboard_counts():
     counts["transactions"] = cursor.fetchone()[0]
     cursor.close()
     conn.close()
+    return counts
+def get_branch_dashboard_counts(branch_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    counts = {}
+
+    cursor.execute("""
+        SELECT COUNT(*)
+        FROM users
+        WHERE
+            branch_id=%s
+            AND role='STAFF'
+    """, (branch_id,))
+    counts["users"] = cursor.fetchone()[0]
+
+    cursor.execute("""
+        SELECT COUNT(*)
+        FROM accounts
+        WHERE branch_id=%s
+    """, (branch_id,))
+    counts["accounts"] = cursor.fetchone()[0]
+
+    cursor.execute("""
+        SELECT COUNT(*)
+        FROM loans l
+        JOIN accounts a
+            ON l.user_id = a.user_id
+        WHERE a.branch_id=%s
+    """, (branch_id,))
+    counts["loans"] = cursor.fetchone()[0]
+
+    cursor.execute("""
+        SELECT COUNT(*)
+        FROM transactions t
+        JOIN accounts a
+            ON t.account_id = a.account_id
+        WHERE a.branch_id=%s
+    """, (branch_id,))
+    counts["transactions"] = cursor.fetchone()[0]
+
+    cursor.close()
+    conn.close()
+
     return counts
 # fetchone retrieves the first row of the query result
 # The result of query is actually like a record of table i.e row 
@@ -745,57 +790,77 @@ def update_loan_status(loan_id,loan_status):
     cursor.close()
     conn.close()
 def get_all_transactions():
-    conn=get_connection()
-    cursor=conn.cursor(dictionary=True)
-    if st.session_state.role=="SUPER_ADMIN":
-        query="""
+
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    if st.session_state.role == "SUPER_ADMIN":
+
+        query = """
         SELECT
-        t.transaction_id,
-        u.user_name,
-        a.account_id,
-        b.branch_name,
-        t.transaction_type,
-        t.amount,
-        t.transaction_date_time
-        FROM transactions t
-
-        JOIN accounts a
-        ON t.account_id = a.account_id
-
-        JOIN users u
-        ON a.user_id = u.user_id
-
-        JOIN branches b
-        ON a.branch_id = b.branch_id
-
-        ORDER BY
-        t.transaction_date_time DESC;
-        """
-        cursor.execute(query)
-    else:
-        query="""
-             SELECT
             t.transaction_id,
             u.user_name,
             a.account_id,
+            t.related_account_id,
             b.branch_name,
             t.transaction_type,
             t.amount,
             t.transaction_date_time
         FROM transactions t
+
         JOIN accounts a
-        ON t.account_id = a.account_id
+            ON t.account_id = a.account_id
+
         JOIN users u
-        ON a.user_id = u.user_id
+            ON a.user_id = u.user_id
+
         JOIN branches b
-        ON a.branch_id = b.branch_id
-        WHERE
-        a.branch_id=%s
+            ON a.branch_id = b.branch_id
+
         ORDER BY
-        t.transaction_date_time DESC;
-    """
-        cursor.execute(query,(st.session_state.branch_id,))
-    data=cursor.fetchall() 
+            t.transaction_date_time DESC
+        """
+
+        cursor.execute(query)
+
+    else:
+
+        query = """
+        SELECT
+            t.transaction_id,
+            u.user_name,
+            a.account_id,
+            t.related_account_id,
+            b.branch_name,
+            t.transaction_type,
+            t.amount,
+            t.transaction_date_time
+        FROM transactions t
+
+        JOIN accounts a
+            ON t.account_id = a.account_id
+
+        JOIN users u
+            ON a.user_id = u.user_id
+
+        JOIN branches b
+            ON a.branch_id = b.branch_id
+
+        WHERE
+            a.branch_id = %s
+
+        ORDER BY
+            t.transaction_date_time DESC
+        """
+
+        cursor.execute(
+            query,
+            (st.session_state.branch_id,)
+        )
+
+    data = cursor.fetchall()
+
     cursor.close()
     conn.close()
+
     return data
